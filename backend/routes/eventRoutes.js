@@ -64,4 +64,21 @@ router.delete("/:eventId", async (req, res) => {
     }
 });
 
+// Remove a participant from an event
+router.post("/remove-participant", async (req, res) => {
+    try {
+        const { eventId, userName } = req.body;
+        const event = await Event.findById(eventId);
+
+        if (!event) return res.status(404).json({ message: "Event not found" });
+
+        event.participants = event.participants.filter(participant => participant !== userName);
+        await event.save();
+
+        res.json({ message: "Participant removed", event });
+    } catch (error) {
+        res.status(500).json({ message: "Error removing participant", error });
+    }
+});
+
 module.exports = router;

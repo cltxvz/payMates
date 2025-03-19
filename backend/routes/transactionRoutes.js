@@ -15,6 +15,24 @@ router.post("/add", async (req, res) => {
     }
 });
 
+// Delete a transaction
+router.delete("/:transactionId", async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        const transaction = await Transaction.findById(transactionId);
+
+        if (!transaction) {
+            return res.status(404).json({ message: "Transaction not found" });
+        }
+
+        await transaction.deleteOne();
+        res.json({ message: "Transaction deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Error deleting transaction", error });
+    }
+});
+
+
 // Get transactions for an event
 router.get("/:eventId", async (req, res) => {
     try {
