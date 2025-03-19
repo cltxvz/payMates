@@ -5,7 +5,7 @@ const EventSchema = new mongoose.Schema({
     name: { type: String, required: true },
     createdBy: { type: String, required: true },
     participants: [{ type: String }], // List of user names
-    inviteCode: { type: String, unique: true },
+    inviteCode: { type: String, unique: true, required: true},
     createdAt: { type: Date, default: Date.now, expires: '7d' } // Auto-delete after 7 days
 }, { timestamps: true });
 

@@ -1,53 +1,98 @@
-import { useState } from "react";
-import axios from "axios";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
 
 const API_BASE_URL = "http://localhost:5003/api";
 
 function Home() {
-  const [name, setName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [userName, setUserName] = useState("");
   const navigate = useNavigate();
+  const [userName, setUserName] = useState("");
+  const [eventName, setEventName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [error, setError] = useState("");
 
+  // Create an event
   const createEvent = async () => {
-    if (!name || !userName) return alert("Please enter event name and your name.");
+    if (!eventName.trim() || !userName.trim()) {
+      setError("Please enter your name and event name.");
+      return;
+    }
     try {
-      const res = await axios.post(`${API_BASE_URL}/events/create`, { name, createdBy: userName });
+      const res = await axios.post(`${API_BASE_URL}/events/create`, {
+        name: eventName,
+        createdBy: userName,
+      });
       navigate(`/event/${res.data._id}`);
     } catch (error) {
-      alert("Error creating event");
+      setError("Error creating event. Try again.");
     }
   };
 
-  const joinEvent = async () => {
-    if (!inviteCode || !userName) return alert("Please enter invite code and your name.");
-    try {
-      const res = await axios.post(`${API_BASE_URL}/events/join`, { inviteCode, userName });
-      navigate(`/event/${res.data._id}`);
-    } catch (error) {
-      alert("Invalid invite code");
+  // Redirect to Join Event Page
+  const fetchEventDetails = () => {
+    if (!inviteCode.trim()) {
+      setError("Please enter an invite code.");
+      return;
     }
+    navigate(`/join/${inviteCode}`); // ✅ Redirect user to Join Event page
   };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>PayMates</h1>
-      
-      <div>
-        <h2>Create an Event</h2>
-        <input type="text" placeholder="Event Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input type="text" placeholder="Your Name" value={userName} onChange={(e) => setUserName(e.target.value)} />
-        <button onClick={createEvent}>Create</button>
-      </div>
+    <Container className="mt-5">
+      <h1 className="text-center mb-4">Welcome to PayMates</h1>
 
-      <div style={{ marginTop: "30px" }}>
-        <h2>Join an Event</h2>
-        <input type="text" placeholder="Invite Code" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
-        <input type="text" placeholder="Your Name" value={userName} onChange={(e) => setUserName(e.target.value)} />
-        <button onClick={joinEvent}>Join</button>
-      </div>
-    </div>
+      {error && <Alert variant="danger">{error}</Alert>}
+
+      <Row>
+        {/* Create Event Section */}
+        <Col md={6}>
+          <Card className="p-4 shadow-sm">
+            <h2 className="text-center">Create an Event</h2>
+            <Form.Group className="mt-3">
+              <Form.Label>Your Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter your name"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group className="mt-3">
+              <Form.Label>Event Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter event name"
+                value={eventName}
+                onChange={(e) => setEventName(e.target.value)}
+              />
+            </Form.Group>
+            <Button variant="success" className="mt-3 w-100" onClick={createEvent}>
+              ➕ Create Event
+            </Button>
+          </Card>
+        </Col>
+
+        {/* Join Event Section */}
+        <Col md={6}>
+          <Card className="p-4 shadow-sm">
+            <h2 className="text-center">Join an Event</h2>
+            <Form.Group className="mt-3">
+              <Form.Label>Invite Code</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter invite code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+              />
+            </Form.Group>
+            <Button variant="primary" className="mt-3 w-100" onClick={fetchEventDetails}>
+              🔍 Find Event
+            </Button>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 

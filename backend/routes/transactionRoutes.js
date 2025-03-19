@@ -15,6 +15,34 @@ router.post("/add", async (req, res) => {
     }
 });
 
+// ✅ Edit a transaction
+router.put("/edit/:transactionId", async (req, res) => {
+    try {
+        const { transactionId } = req.params;
+        const { payer, amount, splitAmong } = req.body;
+
+        console.log("Editing transaction:", transactionId); // Debugging log
+
+        const transaction = await Transaction.findById(transactionId);
+        if (!transaction) {
+            console.log("Transaction not found:", transactionId);
+            return res.status(404).json({ message: "Transaction not found" });
+        }
+
+        // Update transaction details
+        transaction.payer = payer;
+        transaction.amount = amount;
+        transaction.splitAmong = splitAmong;
+        await transaction.save();
+
+        console.log("Updated transaction:", transaction);
+        res.json(transaction);
+    } catch (error) {
+        console.error("Error updating transaction:", error);
+        res.status(500).json({ message: "Error updating transaction", error });
+    }
+});
+
 // Delete a transaction
 router.delete("/:transactionId", async (req, res) => {
     try {
@@ -63,5 +91,31 @@ router.post("/mark-paid", async (req, res) => {
         res.status(500).json({ message: "Error marking payment", error });
     }
 });
+
+// Get balance summary
+router.get("/balance/:eventId", async (req, res) => {
+    try {
+        const transactions = await Transaction.find({ eventId: req.params.eventId });
+
+        let balances = {}; // { "Alice": 10, "Bob": -10 }
+
+        transactions.forEach(tx => {
+            const share = tx.amount / tx.splitAmong.length;
+
+            tx.splitAmong.forEach(user => {
+                if (!balances[user]) balances[user] = 0;
+                balances[user] -= share; // They owe this amount
+            });
+
+            if (!balances[tx.payer]) balances[tx.payer] = 0;
+            balances[tx.payer] += tx.amount; // The payer should get reimbursed
+        });
+
+        res.json(balances);
+    } catch (error) {
+        res.status(500).json({ message: "Error calculating balance summary", error });
+    }
+});
+
 
 module.exports = router;

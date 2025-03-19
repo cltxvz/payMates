@@ -1,181 +1,154 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Container, Row, Col, Button, Card, Form, InputGroup } from "react-bootstrap";
+import Participants from "../components/Event/Participants";
+import Transactions from "../components/Event/Transactions";
+import BalanceSummary from "../components/Event/BalanceSummary";
 
 const API_BASE_URL = "http://localhost:5003/api";
 
 function Event() {
-  const { eventId } = useParams();
+  const { eventId } = useParams(); // ✅ Now correctly retrieving eventId from URL
+  const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [transactions, setTransactions] = useState([]);
-  const [payer, setPayer] = useState("");
-  const [amount, setAmount] = useState("");
-  const [splitAmong, setSplitAmong] = useState([]);
-  const navigate = useNavigate();
-  const [newParticipant, setNewParticipant] = useState("");
+  const [balances, setBalances] = useState({});
+  const [userName] = useState(""); // Simulated "logged-in" user
+  const [inviteLink, setInviteLink] = useState("");
 
-  const goHome = () => {
-    if (!window.confirm("Are you sure you want to leave? All unsaved changes will be lost.")) return;
-    navigate("/");
-  };  
-
-const addParticipant = async () => {
-  if (!newParticipant) return alert("Enter a name!");
-
-  try {
-    await axios.post(`${API_BASE_URL}/events/join`, { inviteCode: event.inviteCode, userName: newParticipant });
-    fetchEvent(); // Refresh participant list
-    setNewParticipant("");
-  } catch (error) {
-    alert("Error adding participant");
-  }
-};
-
-const removeParticipant = async (name) => {
-  if (!window.confirm(`Are you sure you want to remove ${name} from the event?`)) return;
-
-  try {
-    await axios.post(`${API_BASE_URL}/events/remove-participant`, { eventId, userName: name });
-    fetchEvent(); // Refresh participant list
-  } catch (error) {
-    alert("Error removing participant");
-  }
-};
-
-
-  // Memoized function using useCallback
+  // ✅ Fetch event details using eventId
   const fetchEvent = useCallback(async () => {
+    if (!eventId) return;
     try {
       const res = await axios.get(`${API_BASE_URL}/events/${eventId}`);
       setEvent(res.data);
+      setInviteLink(`${window.location.origin}/join/${res.data.inviteCode}`); // ✅ Correcting the join link
     } catch (error) {
-      alert("Event not found");
+      alert("Event not found.");
     }
-  }, [eventId]);
+}, [eventId]);
 
+  // ✅ Fetch transactions for the event
   const fetchTransactions = useCallback(async () => {
+    if (!eventId) return;
     try {
       const res = await axios.get(`${API_BASE_URL}/transactions/${eventId}`);
       setTransactions(res.data);
     } catch (error) {
-      alert("Error fetching transactions");
+      alert("Error fetching transactions.");
     }
   }, [eventId]);
 
-  useEffect(() => {
-    fetchEvent();
-    fetchTransactions();
-  }, [fetchEvent, fetchTransactions]); // Now the warning is resolved
-
-  const addTransaction = async () => {
-    if (!payer || !amount || splitAmong.length === 0) return alert("Fill all fields");
+  // ✅ Fetch balance summary for the event
+  const fetchBalanceSummary = useCallback(async () => {
+    if (!eventId) return;
     try {
-      await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, payer, amount, splitAmong });
-      fetchTransactions(); // Refresh transactions after adding
+      const res = await axios.get(`${API_BASE_URL}/transactions/balance/${eventId}`);
+      setBalances(res.data);
     } catch (error) {
-      alert("Error adding transaction");
+      alert("Error fetching balance summary.");
     }
+  }, [eventId]);
+
+  // ✅ Adding a transaction
+  const addTransaction = async (payer, amount, splitAmong) => {
+    await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, payer, amount, splitAmong });
+    fetchTransactions(); // Refresh transaction list
   };
 
-  const removeEvent = async () => {
-    if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) return;
-    
-    try {
-      await axios.delete(`${API_BASE_URL}/events/${eventId}`);
-      alert("Event removed successfully!");
-      navigate("/"); // Redirect to home page after deletion
-    } catch (error) {
-      alert("Error removing event");
-    }
-  };  
+  // ✅ Editing a transaction
+  const editTransaction = async (transactionId, payer, amount, splitAmong) => {
+    await axios.put(`${API_BASE_URL}/transactions/edit/${transactionId}`, { payer, amount, splitAmong });
+    fetchTransactions(); // Refresh transaction list
+  };
 
+  // ✅ Removing a transaction
   const removeTransaction = async (transactionId) => {
-    if (!window.confirm("Are you sure you want to delete this transaction?")) return;
-  
-    try {
-      await axios.delete(`${API_BASE_URL}/transactions/${transactionId}`);
-      alert("Transaction removed successfully!");
-      fetchTransactions(); // Refresh transaction list
-    } catch (error) {
-      alert("Error removing transaction");
+    await axios.delete(`${API_BASE_URL}/transactions/${transactionId}`);
+    fetchTransactions(); // Refresh transaction list
+  };
+
+  // ✅ Add a participant to the event
+  const addParticipant = async (userName) => {
+    await axios.post(`${API_BASE_URL}/events/join`, { inviteCode: event.inviteCode, userName });
+    fetchEvent(); // Refresh participant list
+  };
+
+  // ✅ Remove a participant from the event
+  const removeParticipant = async (userName) => {
+    await axios.post(`${API_BASE_URL}/events/remove-participant`, { eventId, userName });
+    fetchEvent(); // Refresh participant list
+  };
+
+  // ✅ Fetch all data when eventId is available
+  useEffect(() => {
+    if (!eventId) {
+      console.error("Error: Missing eventId in URL");
+      return;
     }
-  };  
+    fetchEvent();
+    fetchTransactions();
+    fetchBalanceSummary();
+  }, [eventId, fetchEvent, fetchTransactions, fetchBalanceSummary]); 
+
+  // ✅ Copy invite link to clipboard
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteLink);
+    alert("Invitation link copied!");
+  };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
+    <Container className="mt-4">
       {event ? (
         <>
-          <h1>{event.name}</h1>
-  
-          {/* Participants Section */}
-          <h2>Participants</h2>
-          <ul>
-            {event.participants.map((user) => (
-              <li key={user}>
-                {user} 
-                <button style={{ marginLeft: "10px", background: "red", color: "white" }} onClick={() => removeParticipant(user)}>
-                  ❌ Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-  
-          {/* Add Participant Section */}
-          <h3>Add Participant</h3>
-          <input type="text" placeholder="Enter name" value={newParticipant} onChange={(e) => setNewParticipant(e.target.value)} />
-          <button onClick={addParticipant}>➕ Add</button>
-  
-          {/* Transactions Section */}
-          <h2>Add Transaction</h2>
-          <input 
-            type="text" 
-            placeholder="Payer" 
-            value={payer} 
-            onChange={(e) => setPayer(e.target.value)} 
-          />
-          <input 
-            type="number" 
-            placeholder="Amount" 
-            value={amount} 
-            onChange={(e) => setAmount(e.target.value)} 
-          />
-          <input 
-            type="text" 
-            placeholder="Split Among (comma-separated)" 
-            value={splitAmong.join(", ")}
-            onChange={(e) => setSplitAmong(e.target.value.split(","))} 
-          />
-          <button onClick={addTransaction}>➕ Add Transaction</button>
-  
-          {/* Transaction List */}
-          <h2>Transactions</h2>
-          <ul>
-            {transactions.map((tx) => (
-              <li key={tx._id}>
-                {tx.payer} paid ${tx.amount} - Split among: {tx.splitAmong.join(", ")}
-                <button style={{ marginLeft: "10px", background: "red", color: "white" }} onClick={() => removeTransaction(tx._id)}>
-                  ❌ Remove
-                </button>
-              </li>
-            ))}
-          </ul>
-  
+          {/* Title */}
+          <h1 className="text-center">{event.name}</h1>
+
+          {/* Invite Code Section */}
+          <Card className="text-center mt-3">
+            <Card.Body>
+              <h5>Invite Code: <span className="text-primary">{event.inviteCode}</span></h5>
+              <InputGroup className="mt-2">
+                <Form.Control type="text" value={inviteLink} readOnly />
+                <Button variant="primary" onClick={copyToClipboard}>📋 Copy Link</Button>
+              </InputGroup>
+            </Card.Body>
+          </Card>
+
+          {/* Transaction & Participants Section */}
+          <Row className="mt-4">
+            <Col md={7}>
+              <Transactions 
+                transactions={transactions} 
+                participants={event.participants}
+                addTransaction={addTransaction} 
+                editTransaction={editTransaction}
+                removeTransaction={removeTransaction} 
+              />
+            </Col>
+            <Col md={5}>
+              <Participants 
+                participants={event.participants} 
+                addParticipant={addParticipant} 
+                removeParticipant={removeParticipant} 
+              />
+            </Col>
+          </Row>
+
+          {/* Balance Summary Section */}
+          <BalanceSummary balances={balances} userName={userName} />
+
           {/* Action Buttons */}
-          <button style={{ background: "red", color: "white", marginTop: "20px" }} onClick={removeEvent}>
-            Remove Event
-          </button>
-  
-          <button style={{ marginTop: "20px", background: "gray", color: "white" }} onClick={goHome}>
-            🏠 Go Home
-          </button>
+          <div className="text-center mt-4">
+            <Button variant="danger" onClick={() => navigate("/")}>🏠 Go Home</Button>
+          </div>
         </>
       ) : (
-        <h1>Loading event...</h1> // Show this while fetching event data
+        <h1>Loading event...</h1>
       )}
-    </div>
+    </Container>
   );
-  
 }
 
 export default Event;
