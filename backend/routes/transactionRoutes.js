@@ -95,27 +95,28 @@ router.post("/mark-paid", async (req, res) => {
 // Get balance summary
 router.get("/balance/:eventId", async (req, res) => {
     try {
-        const transactions = await Transaction.find({ eventId: req.params.eventId });
-
-        let balances = {}; // { "Alice": 10, "Bob": -10 }
-
-        transactions.forEach(tx => {
-            const share = tx.amount / tx.splitAmong.length;
-
-            tx.splitAmong.forEach(user => {
-                if (!balances[user]) balances[user] = 0;
-                balances[user] -= share; // They owe this amount
-            });
-
-            if (!balances[tx.payer]) balances[tx.payer] = 0;
-            balances[tx.payer] += tx.amount; // The payer should get reimbursed
+      const transactions = await Transaction.find({ eventId: req.params.eventId });
+  
+      const balances = {}; // { userA: { userB: amount } }
+  
+      transactions.forEach((tx) => {
+        const share = tx.amount / tx.splitAmong.length;
+  
+        tx.splitAmong.forEach((participant) => {
+          if (participant === tx.payer) return; // Don't owe yourself
+  
+          if (!balances[participant]) balances[participant] = {};
+          if (!balances[participant][tx.payer]) balances[participant][tx.payer] = 0;
+  
+          balances[participant][tx.payer] += share;
         });
-
-        res.json(balances);
+      });
+  
+      res.json(balances); // e.g., { "Alice": { "Bob": 25 }, "Charlie": { "Bob": 25 } }
     } catch (error) {
-        res.status(500).json({ message: "Error calculating balance summary", error });
+      res.status(500).json({ message: "Error calculating balance summary", error });
     }
-});
-
+  });
+  
 
 module.exports = router;

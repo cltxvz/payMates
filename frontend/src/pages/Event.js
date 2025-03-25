@@ -55,18 +55,21 @@ function Event() {
   const addTransaction = async (payer, amount, splitAmong) => {
     await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, payer, amount, splitAmong });
     fetchTransactions(); // Refresh transaction list
+    fetchBalanceSummary();
   };
 
   // ✅ Editing a transaction
   const editTransaction = async (transactionId, payer, amount, splitAmong) => {
     await axios.put(`${API_BASE_URL}/transactions/edit/${transactionId}`, { payer, amount, splitAmong });
     fetchTransactions(); // Refresh transaction list
+    fetchBalanceSummary();
   };
 
   // ✅ Removing a transaction
   const removeTransaction = async (transactionId) => {
     await axios.delete(`${API_BASE_URL}/transactions/${transactionId}`);
     fetchTransactions(); // Refresh transaction list
+    fetchBalanceSummary();
   };
 
   // ✅ Add a participant to the event

@@ -52,29 +52,35 @@ function JoinEvent() {
 
   // ✅ Join the event and redirect to event ID
   const joinEvent = async () => {
-    if (!selectedParticipant && !userName.trim()) {
-        setError("Please select your name or enter a new one.");
-        return;
+    const name = selectedParticipant || userName.trim();
+  
+    if (!name) {
+      setError("Please select your name or enter a new one.");
+      return;
     }
-
-    console.log("Joining event with inviteCode:", inviteCode, "User:", selectedParticipant || userName);
-
+  
+    console.log("Joining event with inviteCode:", inviteCode, "User:", name);
+  
     try {
-        const res = await axios.post(`${API_BASE_URL}/events/join`, {
-            inviteCode,
-            userName: selectedParticipant || userName,
-        });
-
-        console.log("Redirecting to event:", res.data.eventId); // Debugging log
-        if (!res.data.eventId) {
-            throw new Error("Event ID not returned from API");
-        }
-
-        navigate(`/event/${res.data.eventId}`); // ✅ Redirect using event ID
+      const res = await axios.post(`${API_BASE_URL}/events/join`, {
+        inviteCode,
+        userName: name,
+      });
+  
+      if (!res.data.eventId) {
+        throw new Error("Event ID not returned from API");
+      }
+  
+      // ✅ Save the user to localStorage
+      localStorage.setItem("userName", name);
+  
+      console.log("Redirecting to event:", res.data.eventId);
+      navigate(`/event/${res.data.eventId}`);
     } catch (error) {
-        setError("Error joining event. Try again.");
+      setError("Error joining event. Try again.");
     }
-};
+  };
+  
 
 
 

@@ -1,58 +1,87 @@
 import React from "react";
+import { useEffect } from "react";
 import { Table, Container, Alert, Spinner } from "react-bootstrap";
 
-const BalanceSummary = ({ balances, userName }) => {
-  // Check if balance data is fully loaded
-  const isBalanceLoaded = Object.keys(balances).length > 0;
-  const userBalance = balances[userName];
+const BalanceSummary = ({ balances}) => {
+
+  const userName = localStorage.getItem("userName")?.trim();
+  const isLoaded = balances && Object.keys(balances).length > 0;
+
+  // What the current user owes to others
+  const userOwes = balances[userName] || {};
+
+  // Who owes the current user
+  const owedToUser = Object.entries(balances)
+    .filter(([otherUser, debts]) => debts[userName])
+    .map(([otherUser, debts]) => ({
+      user: otherUser,
+      amount: debts[userName]
+    }));
+
+  useEffect(() => {
+    console.log("✅ [BalanceSummary] userName:", userName);
+    console.log("✅ [BalanceSummary] balances:", balances);
+  }, [balances, userName]);
 
   return (
-    <Container className="mt-4">
-      <h2 className="text-center">Balance Summary</h2>
+    <Container className="mt-5">
+      <h2 className="text-center">Your Balance Summary</h2>
 
-      {/* Show loading spinner while balance data is being fetched */}
-      {!isBalanceLoaded && (
+      {!isLoaded && (
         <div className="text-center">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading balance...</span>
-          </Spinner>
+          <Spinner animation="border" role="status" />
+          <p>Loading balance summary...</p>
         </div>
       )}
 
-      {/* If balance data is loaded but the user has no transactions */}
-      {isBalanceLoaded && userBalance === undefined && (
-        <Alert variant="info" className="text-center">
+      {isLoaded && Object.keys(userOwes).length === 0 && owedToUser.length === 0 && (
+        <Alert variant="info" className="text-center mt-3">
           No balance data available. Add or participate in transactions.
         </Alert>
       )}
 
-      {/* User-specific balance */}
-      {isBalanceLoaded && userBalance !== undefined && (
-        <Alert variant={userBalance < 0 ? "danger" : "success"} className="text-center">
-          {userBalance < 0
-            ? `You owe $${Math.abs(userBalance)} in total`
-            : `You should receive $${userBalance} in total`}
-        </Alert>
+      {Object.keys(userOwes).length > 0 && (
+        <>
+          <h5 className="mt-4">💸 You Owe</h5>
+          <Table striped bordered hover className="mt-2">
+            <thead>
+              <tr>
+                <th>To</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(userOwes).map(([to, amount]) => (
+                <tr key={to}>
+                  <td>{to}</td>
+                  <td>${amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
 
-      {/* Full balance summary */}
-      {isBalanceLoaded && (
-        <Table striped bordered hover className="mt-3">
-          <thead>
-            <tr>
-              <th>Participant</th>
-              <th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(balances).map((user) => (
-              <tr key={user} className={balances[user] < 0 ? "table-danger" : "table-success"}>
-                <td>{user}</td>
-                <td>{balances[user] < 0 ? `Owes $${Math.abs(balances[user])}` : `Receives $${balances[user]}`}</td>
+      {owedToUser.length > 0 && (
+        <>
+          <h5 className="mt-4">💰 Owed To You</h5>
+          <Table striped bordered hover className="mt-2">
+            <thead>
+              <tr>
+                <th>From</th>
+                <th>Amount</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {owedToUser.map(({ user, amount }) => (
+                <tr key={user}>
+                  <td>{user}</td>
+                  <td>${amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </>
       )}
     </Container>
   );
