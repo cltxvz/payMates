@@ -15,17 +15,14 @@ router.post("/add", async (req, res) => {
     }
 });
 
-// ✅ Edit a transaction
+// Edit a transaction
 router.put("/edit/:transactionId", async (req, res) => {
     try {
         const { transactionId } = req.params;
         const { payer, amount, splitAmong } = req.body;
 
-        console.log("Editing transaction:", transactionId); // Debugging log
-
         const transaction = await Transaction.findById(transactionId);
         if (!transaction) {
-            console.log("Transaction not found:", transactionId);
             return res.status(404).json({ message: "Transaction not found" });
         }
 
@@ -35,7 +32,6 @@ router.put("/edit/:transactionId", async (req, res) => {
         transaction.splitAmong = splitAmong;
         await transaction.save();
 
-        console.log("Updated transaction:", transaction);
         res.json(transaction);
     } catch (error) {
         console.error("Error updating transaction:", error);
@@ -97,7 +93,7 @@ router.get("/balance/:eventId", async (req, res) => {
     try {
       const transactions = await Transaction.find({ eventId: req.params.eventId });
   
-      const balances = {}; // { userA: { userB: amount } }
+      const balances = {};
   
       transactions.forEach((tx) => {
         const share = tx.amount / tx.splitAmong.length;
@@ -112,7 +108,7 @@ router.get("/balance/:eventId", async (req, res) => {
         });
       });
   
-      res.json(balances); // e.g., { "Alice": { "Bob": 25 }, "Charlie": { "Bob": 25 } }
+      res.json(balances);
     } catch (error) {
       res.status(500).json({ message: "Error calculating balance summary", error });
     }

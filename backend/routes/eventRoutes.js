@@ -3,7 +3,7 @@ const router = express.Router();
 const Event = require("../models/Event");
 const Transaction = require("../models/Transaction");
 
-// ✅ Create an event
+// Create an event
 router.post("/create", async (req, res) => {
     try {
         const { name, createdBy } = req.body;
@@ -17,21 +17,18 @@ router.post("/create", async (req, res) => {
     }
 });
 
-// ✅ Get event ID using invite code
+// Get event ID using invite code
 router.get("/by-invite/:inviteCode", async (req, res) => {
     try {
-        console.log("Received inviteCode for lookup:", req.params.inviteCode); // Debugging log
 
-        // Find event by inviteCode (not event ID)
+        // Find event by inviteCode
         const event = await Event.findOne({ inviteCode: req.params.inviteCode });
 
         if (!event) {
-            console.log("Event not found for inviteCode:", req.params.inviteCode);
             return res.status(404).json({ message: "Event not found" });
         }
 
-        console.log("Event found - ID:", event._id, "with inviteCode:", event.inviteCode);
-        res.json({ eventId: event._id }); // ✅ Return the event ID
+        res.json({ eventId: event._id }); // Return the event ID
 
     } catch (error) {
         console.error("Error fetching event ID:", error);
@@ -39,28 +36,22 @@ router.get("/by-invite/:inviteCode", async (req, res) => {
     }
 });
 
-
-// ✅ Join an event via invite code (using event ID)
+// Join an event via invite code (using event ID)
 router.post("/join", async (req, res) => {
     try {
         const { inviteCode, userName } = req.body;
-        console.log("Joining Event - Invite Code:", inviteCode, "User:", userName);
 
         const event = await Event.findOne({ inviteCode }); // Find event by invite code
         if (!event) {
-            console.log("Event not found for inviteCode:", inviteCode);
             return res.status(404).json({ message: "Event not found" });
         }
 
         if (!event.participants.includes(userName)) {
             event.participants.push(userName);
             await event.save();
-            console.log("User added to event:", event._id, "Participants:", event.participants);
-        } else {
-            console.log("User already in event:", userName);
         }
 
-        res.json({ eventId: event._id }); // ✅ Ensure response includes event ID
+        res.json({ eventId: event._id }); // Ensure response includes event ID
 
     } catch (error) {
         console.error("Error joining event:", error);
@@ -69,7 +60,7 @@ router.post("/join", async (req, res) => {
 });
 
 
-// ✅ Get event details by event ID
+// Get event details by event ID
 router.get("/:eventId", async (req, res) => {
     try {
         const event = await Event.findById(req.params.eventId);
@@ -113,7 +104,5 @@ router.post("/remove-participant", async (req, res) => {
         res.status(500).json({ message: "Error removing participant", error });
     }
 });
-
-
 
 module.exports = router;
