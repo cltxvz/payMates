@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Container, Row, Col, Card, Form, Button } from "react-bootstrap";
-import Header from "../components/Header";
+import Header from "../components/Home/HomeHeader";
 import Footer from "../components/Footer";
 
 const API_BASE_URL = "http://localhost:5003/api";
