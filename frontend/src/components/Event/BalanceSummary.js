@@ -1,5 +1,4 @@
 import React from "react";
-import { useEffect } from "react";
 import { Table, Container, Alert, Spinner } from "react-bootstrap";
 
 const BalanceSummary = ({ balances}) => {
@@ -17,11 +16,6 @@ const BalanceSummary = ({ balances}) => {
       user: otherUser,
       amount: debts[userName]
     }));
-
-  useEffect(() => {
-    console.log("✅ [BalanceSummary] userName:", userName);
-    console.log("✅ [BalanceSummary] balances:", balances);
-  }, [balances, userName]);
 
   return (
     <Container className="mt-5">

@@ -18,6 +18,36 @@ function Event() {
   const [balances, setBalances] = useState({});
   const [userName] = useState(localStorage.getItem("userName") || "");
   const [inviteLink, setInviteLink] = useState("");
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    if (!event?.createdAt) return;
+  
+    const expirationTime = new Date(event.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
+  
+    const updateCountdown = () => {
+      const now = Date.now();
+      const diff = expirationTime - now;
+  
+      if (diff <= 0) {
+        setTimeLeft("Event has expired.");
+        return;
+      }
+  
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
+    };
+  
+    updateCountdown(); // Initial call
+    const interval = setInterval(updateCountdown, 1000); // Every second
+  
+    return () => clearInterval(interval);
+  }, [event]);
+  
 
   const fetchEvent = useCallback(async () => {
     if (!eventId) return;
@@ -155,6 +185,12 @@ function Event() {
               <Button variant="danger" onClick={deleteEvent}>
                 🗑️ Delete Event
               </Button>
+
+              {timeLeft && (
+                <p className="mt-4 text-muted">
+                  ⏳ This event will expire in <strong>{timeLeft}</strong>
+                </p>
+              )}
             </div>
           </>
         ) : (

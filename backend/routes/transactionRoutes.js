@@ -5,15 +5,34 @@ const Transaction = require("../models/Transaction");
 // Add a transaction
 router.post("/add", async (req, res) => {
     try {
-        const { eventId, payer, amount, splitAmong } = req.body;
-        const newTransaction = new Transaction({ eventId, payer, amount, splitAmong, paidBy: [] });
-
-        await newTransaction.save();
-        res.status(201).json(newTransaction);
+      const { eventId, payer, amount, splitAmong } = req.body;
+  
+      if (
+        !eventId ||
+        !payer ||
+        !amount ||
+        typeof splitAmong !== "object" ||
+        Object.keys(splitAmong).length === 0
+      ) {
+        return res.status(400).json({ message: "Invalid transaction data" });
+      }
+  
+      const newTransaction = new Transaction({
+        eventId,
+        payer,
+        amount,
+        splitAmong,
+        paidBy: [],
+      });
+  
+      await newTransaction.save();
+      res.status(201).json(newTransaction);
     } catch (error) {
-        res.status(500).json({ message: "Error adding transaction", error });
+      console.error("❌ Error adding transaction:", error);
+      res.status(500).json({ message: "Error adding transaction", error });
     }
-});
+  });
+  
 
 // Edit a transaction
 router.put("/edit/:transactionId", async (req, res) => {
@@ -96,16 +115,17 @@ router.get("/balance/:eventId", async (req, res) => {
       const balances = {};
   
       transactions.forEach((tx) => {
-        const share = tx.amount / tx.splitAmong.length;
+        const payer = tx.payer;
+        const splits = tx.splitAmong;
   
-        tx.splitAmong.forEach((participant) => {
-          if (participant === tx.payer) return; // Don't owe yourself
+        for (const [participant, share] of splits.entries()) {
+          if (participant === payer) continue;
   
           if (!balances[participant]) balances[participant] = {};
-          if (!balances[participant][tx.payer]) balances[participant][tx.payer] = 0;
+          if (!balances[participant][payer]) balances[participant][payer] = 0;
   
-          balances[participant][tx.payer] += share;
-        });
+          balances[participant][payer] += share;
+        }
       });
   
       res.json(balances);
@@ -113,6 +133,7 @@ router.get("/balance/:eventId", async (req, res) => {
       res.status(500).json({ message: "Error calculating balance summary", error });
     }
   });
+  
   
 
 module.exports = router;
