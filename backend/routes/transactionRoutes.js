@@ -97,26 +97,31 @@ router.get("/:eventId", async (req, res) => {
   }
 });
 
-// Mark transaction as paid
+// Mark or unmark transaction as paid
 router.post("/mark-paid", async (req, res) => {
   try {
     const { transactionId, userName } = req.body;
     const transaction = await Transaction.findById(transactionId);
 
-    if (!transaction) {
-      return res.status(404).json({ message: "Transaction not found" });
-    }
+    if (!transaction) return res.status(404).json({ message: "Transaction not found" });
 
-    if (!transaction.paidBy.includes(userName)) {
+    const index = transaction.paidBy.indexOf(userName);
+
+    if (index === -1) {
+      // Not marked yet → Add it
       transaction.paidBy.push(userName);
-      await transaction.save();
+    } else {
+      // Already marked → Remove it
+      transaction.paidBy.splice(index, 1);
     }
 
+    await transaction.save();
     res.json(transaction);
   } catch (error) {
-    res.status(500).json({ message: "Error marking payment", error });
+    res.status(500).json({ message: "Error updating payment status", error });
   }
 });
+
 
 // Get balance summary
 router.get("/balance/:eventId", async (req, res) => {

@@ -16,6 +16,7 @@ function Event() {
   const [event, setEvent] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [balances, setBalances] = useState({});
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [userName] = useState(localStorage.getItem("userName") || "");
   const [inviteLink, setInviteLink] = useState("");
 
@@ -40,15 +41,20 @@ function Event() {
     }
   }, [eventId]);
 
-  const fetchBalanceSummary = useCallback(async () => {
-    if (!eventId) return;
-    try {
-      const res = await axios.get(`${API_BASE_URL}/transactions/balance/${eventId}`);
-      setBalances(res.data);
-    } catch (error) {
-      alert("Error fetching balance summary.");
-    }
-  }, [eventId]);
+
+const fetchBalanceSummary = useCallback(async () => {
+  if (!eventId) return;
+  try {
+    setIsBalanceLoading(true);
+    const res = await axios.get(`${API_BASE_URL}/transactions/balance/${eventId}`);
+    setBalances(res.data);
+  } catch (error) {
+    alert("Error fetching balance summary.");
+  } finally {
+    setIsBalanceLoading(false);
+  }
+}, [eventId]);
+
 
   const addTransaction = async (title, payer, amount, splitAmong) => {
     await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, title, payer, amount, splitAmong });
@@ -67,6 +73,19 @@ function Event() {
     fetchTransactions();
     fetchBalanceSummary();
   };
+
+  const markAsPaid = async (transactionId) => {
+    try {
+      await axios.post(`${API_BASE_URL}/transactions/mark-paid`, {
+        transactionId,
+        userName,
+      });
+      fetchBalanceSummary();
+      fetchTransactions();
+    } catch (error) {
+      alert("Error marking as paid.");
+    }
+  };  
 
   const addParticipant = async (userName) => {
     await axios.post(`${API_BASE_URL}/events/join`, { inviteCode: event.inviteCode, userName });
@@ -142,8 +161,13 @@ function Event() {
             </Row>
 
             {/* Balance Summary */}
-            <BalanceSummary balances={balances} userName={userName} />
-
+            <BalanceSummary
+              balances={balances}
+              transactions={transactions}
+              userName={userName}
+              onMarkPaid={markAsPaid}
+              isLoading={isBalanceLoading}
+            />
           </>
         ) : (
           <h1 className="text-center mt-5">Loading event...</h1>
