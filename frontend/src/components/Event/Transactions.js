@@ -5,6 +5,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
+  const [title, setTitle] = useState("");
   const [payer, setPayer] = useState("");
   const [amount, setAmount] = useState("");
   const [selectedParticipants, setSelectedParticipants] = useState([]);
@@ -15,14 +16,16 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
     if (transaction) {
       setIsEditing(true);
       setTransactionId(transaction._id);
+      setTitle(transaction.title || "");
       setPayer(transaction.payer);
       setAmount(transaction.amount);
       setSelectedParticipants(Object.keys(transaction.splitAmong));
       setCustomAmounts(transaction.splitAmong);
-      setSplitEvenly(false); // assume custom on edit
+      setSplitEvenly(false);
     } else {
       setIsEditing(false);
       setTransactionId(null);
+      setTitle("");
       setPayer("");
       setAmount("");
       setSelectedParticipants([]);
@@ -35,11 +38,11 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
   const closeModal = () => setShowModal(false);
 
   const toggleParticipant = (participant) => {
-    let updated = [...selectedParticipants];
-    let updatedAmounts = { ...customAmounts };
+    const updated = [...selectedParticipants];
+    const updatedAmounts = { ...customAmounts };
 
     if (updated.includes(participant)) {
-      updated = updated.filter((p) => p !== participant);
+      updated.splice(updated.indexOf(participant), 1);
       delete updatedAmounts[participant];
     } else {
       updated.push(participant);
@@ -59,17 +62,23 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
 
   const handleSubmit = () => {
     const total = parseFloat(amount);
-    if (!payer || !total || selectedParticipants.length === 0) {
-      alert("Please complete all fields and select participants.");
+    if (!title || !payer || !total || selectedParticipants.length === 0) {
+      alert("Please complete all fields.");
       return;
     }
 
     let finalSplit = {};
 
     if (splitEvenly) {
+      if (selectedParticipants.length === 0) {
+        alert("Please select at least one participant.");
+        return;
+      }
       const share = parseFloat((total / selectedParticipants.length).toFixed(2));
       selectedParticipants.forEach((p) => {
-        finalSplit[p] = share;
+        if (!isNaN(share)) {
+          finalSplit[p] = share;
+        }
       });
     } else {
       const totalSplit = selectedParticipants.reduce(
@@ -77,7 +86,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
         0
       );
       if (parseFloat(totalSplit.toFixed(2)) !== total) {
-        alert(`Split total ($${totalSplit.toFixed(2)}) must match total amount ($${total.toFixed(2)})`);
+        alert(`Split total ($${totalSplit.toFixed(2)}) must match total amount ($${total.toFixed(2)}).`);
         return;
       }
       selectedParticipants.forEach((p) => {
@@ -86,10 +95,11 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
     }
 
     if (isEditing) {
-      editTransaction(transactionId, payer, total, finalSplit);
+      editTransaction(transactionId, title, payer, total, finalSplit);
     } else {
-      addTransaction(payer, total, finalSplit);
+      addTransaction(title, payer, total, finalSplit);
     }
+    
 
     closeModal();
   };
@@ -97,26 +107,40 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
   return (
     <div className="event-section">
       <h2 className="text-center">Transactions</h2>
-
+  
       <ListGroup className="mb-3">
         {transactions.map((tx) => (
-          <ListGroup.Item key={tx._id} className="d-flex justify-content-between align-items-center">
-            <div>
-              {tx.payer} paid ${tx.amount} – Split among:{" "}
-              {Object.entries(tx.splitAmong)
-                .map(([name, amt]) => `${name}: $${amt.toFixed(2)}`)
-                .join(", ")}
-            </div>
-            <div>
-              <Button variant="warning" size="sm" className="me-2" onClick={() => openModal(tx)}>✏️ Edit</Button>
-              <Button variant="danger" size="sm" onClick={() => removeTransaction(tx._id)}>❌ Delete</Button>
+          <ListGroup.Item key={tx._id}>
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-start">
+              <div className="flex-grow-1 me-md-3">
+                <div>
+                  <strong>{tx.title || "Untitled"}</strong> – <strong>{tx.payer}</strong> paid{" "}
+                  <strong>${tx.amount.toFixed(2)}</strong>.
+                </div>
+                <div className="text-muted small">
+                  <strong>Participants – </strong>
+                  {Object.entries(tx.splitAmong)
+                    .map(([name, amt]) => `${name}: $${amt.toFixed(2)}`)
+                    .join(", ")}
+                </div>
+              </div>
+              <div className="d-flex align-items-center flex-shrink-0 gap-2 mt-2 mt-md-0">
+                <Button variant="warning" size="sm" onClick={() => openModal(tx)}>
+                  ✏️ Edit
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => removeTransaction(tx._id)}>
+                  ❌ Delete
+                </Button>
+              </div>
             </div>
           </ListGroup.Item>
         ))}
       </ListGroup>
-
-      <Button variant="success" onClick={() => openModal()}>➕ Add Transaction</Button>
-
+  
+      <Button variant="success" onClick={() => openModal()}>
+        ➕ Add Transaction
+      </Button>
+  
       {/* Modal */}
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
@@ -124,6 +148,17 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
         </Modal.Header>
         <Modal.Body>
           <Form>
+            {/* Title */}
+            <Form.Group className="mb-3">
+              <Form.Label><strong>Title:</strong></Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="e.g. McDonald's, Uber, Airbnb"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </Form.Group>
+  
             {/* Payer */}
             <Form.Group className="mb-3">
               <Form.Label><strong>Payer:</strong></Form.Label>
@@ -134,11 +169,13 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
               >
                 <option value="">Select a payer</option>
                 {participants.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </Form.Control>
             </Form.Group>
-
+  
             {/* Participants */}
             <Form.Group className="mb-3">
               <Form.Label><strong>Participants:</strong></Form.Label>
@@ -152,18 +189,18 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                 />
               ))}
             </Form.Group>
-
-            {/* Total Amount */}
+  
+            {/* Amount */}
             <Form.Group className="mb-3">
-              <Form.Label><strong>Amount:</strong></Form.Label>
+              <Form.Label><strong>Total Amount:</strong></Form.Label>
               <Form.Control
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
             </Form.Group>
-
-            {/* Split Evenly Toggle */}
+  
+            {/* Split toggle */}
             <Form.Group className="mb-3">
               <Form.Check
                 type="checkbox"
@@ -172,8 +209,8 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                 onChange={() => setSplitEvenly(!splitEvenly)}
               />
             </Form.Group>
-
-            {/* Custom Inputs per Participant */}
+  
+            {/* Custom splits */}
             {!splitEvenly && selectedParticipants.length > 0 && (
               <Form.Group>
                 <Form.Label><strong>Custom Amounts:</strong></Form.Label>
@@ -203,6 +240,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
       </Modal>
     </div>
   );
+  
 };
 
 export default Transactions;

@@ -1,20 +1,49 @@
 import React, { useState } from "react";
-import { Button, ListGroup, Modal, Form } from "react-bootstrap";
+import { Button, ListGroup, Modal, Form} from "react-bootstrap";
 
 const Participants = ({ participants, addParticipant, removeParticipant }) => {
   const [showModal, setShowModal] = useState(false);
   const [newParticipant, setNewParticipant] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalName, setOriginalName] = useState("");
 
-  // Open modal
-  const openModal = () => setShowModal(true);
+  // Open modal for add or edit
+  const openAddModal = () => {
+    setIsEditing(false);
+    setNewParticipant("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (name) => {
+    setIsEditing(true);
+    setOriginalName(name);
+    setNewParticipant(name);
+    setShowModal(true);
+  };
+
   const closeModal = () => {
-    setNewParticipant(""); // Clear input when closing
+    setNewParticipant("");
+    setOriginalName("");
+    setIsEditing(false);
     setShowModal(false);
   };
 
-  const handleAddParticipant = () => {
-    if (!newParticipant.trim()) return alert("Enter a valid name!");
-    addParticipant(newParticipant);
+  const handleSubmit = () => {
+    const trimmed = newParticipant.trim();
+    if (!trimmed) return alert("Enter a valid name!");
+
+    if (isEditing) {
+      if (trimmed === originalName) {
+        alert("No changes made.");
+        return;
+      }
+
+      removeParticipant(originalName); // Remove old name
+      addParticipant(trimmed); // Add updated name
+    } else {
+      addParticipant(trimmed);
+    }
+
     closeModal();
   };
 
@@ -26,26 +55,42 @@ const Participants = ({ participants, addParticipant, removeParticipant }) => {
       <ListGroup className="mb-3">
         {participants.map((user) => (
           <ListGroup.Item key={user} className="d-flex justify-content-between align-items-center">
-            {user}
-            <Button variant="danger" size="sm" onClick={() => removeParticipant(user)}>
-              ❌ Remove
-            </Button>
+            <span>{user}</span>
+            <div>
+              <Button
+                variant="warning"
+                size="sm"
+                className="me-2"
+                onClick={() => openEditModal(user)}
+              >
+                ✏️ Edit
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => removeParticipant(user)}
+              >
+                ❌ Remove
+              </Button>
+            </div>
           </ListGroup.Item>
         ))}
       </ListGroup>
 
       {/* Add Participant Button */}
-      <Button variant="success" onClick={openModal}>➕ Add Participant</Button>
+      <Button variant="success" onClick={openAddModal}>
+        ➕ Add Participant
+      </Button>
 
-      {/* Add Participant Modal */}
+      {/* Add/Edit Modal */}
       <Modal show={showModal} onHide={closeModal}>
         <Modal.Header closeButton>
-          <Modal.Title>Add Participant</Modal.Title>
+          <Modal.Title>{isEditing ? "Edit Participant" : "Add Participant"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Enter Name</Form.Label>
+              <Form.Label>{isEditing ? "Update Name" : "Enter Name"}</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Participant name"
@@ -57,7 +102,9 @@ const Participants = ({ participants, addParticipant, removeParticipant }) => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={closeModal}>Cancel</Button>
-          <Button variant="primary" onClick={handleAddParticipant}>➕ Add</Button>
+          <Button variant="primary" onClick={handleSubmit}>
+            {isEditing ? "Save" : "➕ Add"}
+          </Button>
         </Modal.Footer>
       </Modal>
     </div>

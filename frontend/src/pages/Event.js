@@ -18,36 +18,6 @@ function Event() {
   const [balances, setBalances] = useState({});
   const [userName] = useState(localStorage.getItem("userName") || "");
   const [inviteLink, setInviteLink] = useState("");
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    if (!event?.createdAt) return;
-  
-    const expirationTime = new Date(event.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000;
-  
-    const updateCountdown = () => {
-      const now = Date.now();
-      const diff = expirationTime - now;
-  
-      if (diff <= 0) {
-        setTimeLeft("Event has expired.");
-        return;
-      }
-  
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-      const seconds = Math.floor((diff / 1000) % 60);
-  
-      setTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s`);
-    };
-  
-    updateCountdown(); // Initial call
-    const interval = setInterval(updateCountdown, 1000); // Every second
-  
-    return () => clearInterval(interval);
-  }, [event]);
-  
 
   const fetchEvent = useCallback(async () => {
     if (!eventId) return;
@@ -80,14 +50,14 @@ function Event() {
     }
   }, [eventId]);
 
-  const addTransaction = async (payer, amount, splitAmong) => {
-    await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, payer, amount, splitAmong });
+  const addTransaction = async (title, payer, amount, splitAmong) => {
+    await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, title, payer, amount, splitAmong });
     fetchTransactions();
     fetchBalanceSummary();
   };
 
-  const editTransaction = async (transactionId, payer, amount, splitAmong) => {
-    await axios.put(`${API_BASE_URL}/transactions/edit/${transactionId}`, { payer, amount, splitAmong });
+  const editTransaction = async (transactionId, title, payer, amount, splitAmong) => {
+    await axios.put(`${API_BASE_URL}/transactions/edit/${transactionId}`, { title, payer, amount, splitAmong });
     fetchTransactions();
     fetchBalanceSummary();
   };
@@ -108,17 +78,6 @@ function Event() {
     fetchEvent();
   };
 
-  const deleteEvent = async () => {
-    if (!window.confirm("Are you sure you want to delete this event and all related transactions?")) return;
-    try {
-      await axios.delete(`${API_BASE_URL}/events/${eventId}`);
-      alert("Event deleted successfully.");
-      navigate("/");
-    } catch (error) {
-      alert("Failed to delete the event.");
-    }
-  };
-
   useEffect(() => {
     if (!eventId) {
       console.error("Error: Missing eventId in URL");
@@ -136,10 +95,15 @@ function Event() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {event && <EventHeader eventName={event.name} userName={userName} />}
+      {event && <EventHeader eventName={event.name} createdAt={event.createdAt} />}
       <Container className="mb-5 flex-grow-1">
         {event ? (
           <>
+
+            <h2 className="text-center mb-4 mt-3">
+              Welcome{userName ? `, ${userName}` : ""}!
+            </h2>
+            
             {/* Invite Code Section */}
             <Card className="text-center mt-2">
               <Card.Body>
@@ -180,18 +144,6 @@ function Event() {
             {/* Balance Summary */}
             <BalanceSummary balances={balances} userName={userName} />
 
-            {/* Delete Event Button */}
-            <div className="text-center mt-5">
-              <Button variant="danger" onClick={deleteEvent}>
-                🗑️ Delete Event
-              </Button>
-
-              {timeLeft && (
-                <p className="mt-4 text-muted">
-                  ⏳ This event will expire in <strong>{timeLeft}</strong>
-                </p>
-              )}
-            </div>
           </>
         ) : (
           <h1 className="text-center mt-5">Loading event...</h1>
