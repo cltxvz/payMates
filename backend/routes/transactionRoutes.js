@@ -40,7 +40,7 @@ router.post("/add", async (req, res) => {
     await newTransaction.save();
     res.status(201).json(newTransaction);
   } catch (error) {
-    console.error("❌ Error adding transaction:", error);
+    console.error("Error adding transaction:", error);
     res.status(500).json({ message: "Error adding transaction", error });
   }
 });
@@ -64,7 +64,7 @@ router.put("/edit/:transactionId", async (req, res) => {
     await transaction.save();
     res.json(transaction);
   } catch (error) {
-    console.error("❌ Error updating transaction:", error);
+    console.error("Error updating transaction:", error);
     res.status(500).json({ message: "Error updating transaction", error });
   }
 });

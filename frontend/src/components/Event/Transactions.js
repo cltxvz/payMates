@@ -11,6 +11,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [customAmounts, setCustomAmounts] = useState({});
   const [splitEvenly, setSplitEvenly] = useState(true);
+  const [errors, setErrors] = useState({});
 
   const openModal = (transaction = null) => {
     if (transaction) {
@@ -61,48 +62,57 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
   };
 
   const handleSubmit = () => {
-    const total = parseFloat(amount);
-    if (!title || !payer || !total || selectedParticipants.length === 0) {
-      alert("Please complete all fields.");
-      return;
-    }
-
-    let finalSplit = {};
-
-    if (splitEvenly) {
-      if (selectedParticipants.length === 0) {
-        alert("Please select at least one participant.");
-        return;
-      }
-      const share = parseFloat((total / selectedParticipants.length).toFixed(2));
-      selectedParticipants.forEach((p) => {
-        if (!isNaN(share)) {
-          finalSplit[p] = share;
-        }
-      });
-    } else {
+    const newErrors = {};
+  
+    if (!title.trim()) newErrors.title = "Title is required.";
+    if (!payer) newErrors.payer = "Please select a payer.";
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0)
+      newErrors.amount = "Enter a valid amount.";
+    if (selectedParticipants.length === 0)
+      newErrors.participants = "Select at least one participant.";
+  
+    if (!splitEvenly) {
       const totalSplit = selectedParticipants.reduce(
         (sum, p) => sum + (customAmounts[p] || 0),
         0
       );
+      const total = parseFloat(amount);
       if (parseFloat(totalSplit.toFixed(2)) !== total) {
-        alert(`Split total ($${totalSplit.toFixed(2)}) must match total amount ($${total.toFixed(2)}).`);
-        return;
+        newErrors.customAmounts = `Split total ($${totalSplit.toFixed(
+          2
+        )}) must match total amount ($${total.toFixed(2)}).`;
       }
+    }
+  
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+  
+    // If no errors, continue:
+    const total = parseFloat(amount);
+    const finalSplit = {};
+  
+    if (splitEvenly) {
+      const share = parseFloat((total / selectedParticipants.length).toFixed(2));
+      selectedParticipants.forEach((p) => {
+        finalSplit[p] = share;
+      });
+    } else {
       selectedParticipants.forEach((p) => {
         finalSplit[p] = customAmounts[p] || 0;
       });
     }
-
+  
     if (isEditing) {
       editTransaction(transactionId, title, payer, total, finalSplit);
     } else {
       addTransaction(title, payer, total, finalSplit);
     }
-    
-
+  
+    setErrors({});
     closeModal();
-  };
+  };  
 
   return (
     <div className="event-section">
@@ -156,7 +166,9 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                 placeholder="e.g. McDonald's, Uber, Airbnb"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                isInvalid={!!errors.title}
               />
+              {errors.title && <div className="text-danger small">{errors.title}</div>}
             </Form.Group>
   
             {/* Payer */}
@@ -166,6 +178,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                 as="select"
                 value={payer}
                 onChange={(e) => setPayer(e.target.value)}
+                isInvalid={!!errors.payer}
               >
                 <option value="">Select a payer</option>
                 {participants.map((p) => (
@@ -174,6 +187,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                   </option>
                 ))}
               </Form.Control>
+              {errors.payer && <div className="text-danger small">{errors.payer}</div>}
             </Form.Group>
   
             {/* Participants */}
@@ -188,6 +202,7 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                   onChange={() => toggleParticipant(p)}
                 />
               ))}
+              {errors.participants && <div className="text-danger small">{errors.participants}</div>}
             </Form.Group>
   
             {/* Amount */}
@@ -197,7 +212,9 @@ const Transactions = ({ transactions, participants, addTransaction, editTransact
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
+                isInvalid={!!errors.amount}
               />
+              {errors.amount && <div className="text-danger small">{errors.amount}</div>}
             </Form.Group>
   
             {/* Split toggle */}

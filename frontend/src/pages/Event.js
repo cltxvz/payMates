@@ -7,6 +7,7 @@ import Transactions from "../components/Event/Transactions";
 import BalanceSummary from "../components/Event/BalanceSummary";
 import EventHeader from "../components/Event/EventHeader";
 import Footer from "../components/Footer";
+import ToastMessage from "../components/ToastMessage";
 
 const API_BASE_URL = "http://localhost:5003/api";
 
@@ -19,6 +20,11 @@ function Event() {
   const [isBalanceLoading, setIsBalanceLoading] = useState(true);
   const [userName] = useState(localStorage.getItem("userName") || "");
   const [inviteLink, setInviteLink] = useState("");
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, variant = "info") => {
+    setToast({ message, variant });
+  };
 
   const fetchEvent = useCallback(async () => {
     if (!eventId) return;
@@ -27,7 +33,7 @@ function Event() {
       setEvent(res.data);
       setInviteLink(`${window.location.origin}/join/${res.data.inviteCode}`);
     } catch (error) {
-      alert("Event not found.");
+      showToast("Event not found", "danger");
     }
   }, [eventId]);
 
@@ -37,41 +43,42 @@ function Event() {
       const res = await axios.get(`${API_BASE_URL}/transactions/${eventId}`);
       setTransactions(res.data);
     } catch (error) {
-      alert("Error fetching transactions.");
+      showToast("Error fetching transactions", "danger");
     }
   }, [eventId]);
 
-
-const fetchBalanceSummary = useCallback(async () => {
-  if (!eventId) return;
-  try {
-    setIsBalanceLoading(true);
-    const res = await axios.get(`${API_BASE_URL}/transactions/balance/${eventId}`);
-    setBalances(res.data);
-  } catch (error) {
-    alert("Error fetching balance summary.");
-  } finally {
-    setIsBalanceLoading(false);
-  }
-}, [eventId]);
-
+  const fetchBalanceSummary = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      setIsBalanceLoading(true);
+      const res = await axios.get(`${API_BASE_URL}/transactions/balance/${eventId}`);
+      setBalances(res.data);
+    } catch (error) {
+      showToast("Error fetching balance summary", "danger");
+    } finally {
+      setIsBalanceLoading(false);
+    }
+  }, [eventId]);
 
   const addTransaction = async (title, payer, amount, splitAmong) => {
     await axios.post(`${API_BASE_URL}/transactions/add`, { eventId, title, payer, amount, splitAmong });
     fetchTransactions();
     fetchBalanceSummary();
+    showToast("Transaction added!", "success");
   };
 
   const editTransaction = async (transactionId, title, payer, amount, splitAmong) => {
     await axios.put(`${API_BASE_URL}/transactions/edit/${transactionId}`, { title, payer, amount, splitAmong });
     fetchTransactions();
     fetchBalanceSummary();
+    showToast("Transaction updated!", "info");
   };
 
   const removeTransaction = async (transactionId) => {
     await axios.delete(`${API_BASE_URL}/transactions/${transactionId}`);
     fetchTransactions();
     fetchBalanceSummary();
+    showToast("Transaction deleted!", "warning");
   };
 
   const markAsPaid = async (transactionId) => {
@@ -83,18 +90,25 @@ const fetchBalanceSummary = useCallback(async () => {
       fetchBalanceSummary();
       fetchTransactions();
     } catch (error) {
-      alert("Error marking as paid.");
+      showToast("Error marking as paid", "danger");
     }
-  };  
+  };
 
   const addParticipant = async (userName) => {
     await axios.post(`${API_BASE_URL}/events/join`, { inviteCode: event.inviteCode, userName });
     fetchEvent();
+    showToast("Participant added!", "success");
   };
 
   const removeParticipant = async (userName) => {
     await axios.post(`${API_BASE_URL}/events/remove-participant`, { eventId, userName });
     fetchEvent();
+    showToast("Participant removed!", "warning");
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteLink);
+    showToast("Invitation link copied!", "info");
   };
 
   useEffect(() => {
@@ -107,23 +121,23 @@ const fetchBalanceSummary = useCallback(async () => {
     fetchBalanceSummary();
   }, [eventId, fetchEvent, fetchTransactions, fetchBalanceSummary]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteLink);
-    alert("Invitation link copied!");
-  };
-
   return (
     <div className="d-flex flex-column min-vh-100">
+      {toast && (
+        <ToastMessage
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
       {event && <EventHeader eventName={event.name} createdAt={event.createdAt} />}
       <Container className="mb-5 flex-grow-1">
         {event ? (
           <>
-
             <h2 className="text-center mb-4 mt-3">
               Welcome{userName ? `, ${userName}` : ""}!
             </h2>
-            
-            {/* Invite Code Section */}
+
             <Card className="text-center mt-2">
               <Card.Body>
                 <h5>
@@ -140,7 +154,6 @@ const fetchBalanceSummary = useCallback(async () => {
               </Card.Body>
             </Card>
 
-            {/* Transactions & Participants */}
             <Row className="mt-4">
               <Col md={7}>
                 <Transactions
@@ -160,7 +173,6 @@ const fetchBalanceSummary = useCallback(async () => {
               </Col>
             </Row>
 
-            {/* Balance Summary */}
             <BalanceSummary
               balances={balances}
               transactions={transactions}

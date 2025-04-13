@@ -1,12 +1,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { Container, Card, ListGroup, Button, Form, Alert } from "react-bootstrap";
+import {
+  Container,
+  Card,
+  ListGroup,
+  Button,
+  Form,
+  Toast,
+  ToastContainer,
+} from "react-bootstrap";
+import Header from "../components/Home/HomeHeader";
+import Footer from "../components/Footer";
 
 const API_BASE_URL = "http://localhost:5003/api";
 
 function JoinEvent() {
-  const { inviteCode } = useParams(); // Get invite code from URL
+  const { inviteCode } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [eventId, setEventId] = useState(null);
@@ -14,24 +24,15 @@ function JoinEvent() {
   const [userName, setUserName] = useState("");
   const [error, setError] = useState("");
 
-  // ✅ Step 1: Fetch event ID using invite code
   const fetchEventId = useCallback(async () => {
     try {
-        console.log("Requesting event ID for inviteCode:", inviteCode); // Debugging log
-
-        const res = await axios.get(`${API_BASE_URL}/events/by-invite/${inviteCode}`); 
-        setEventId(res.data.eventId); // ✅ Use the correct event ID
-
-        console.log("Fetched Event ID:", res.data.eventId); // Debugging log
+      const res = await axios.get(`${API_BASE_URL}/events/by-invite/${inviteCode}`);
+      setEventId(res.data.eventId);
     } catch (error) {
-        console.error("Failed to fetch event ID:", error);
-        alert("Invalid invite code. Event not found.");
+      setError("Invalid invite code. Event not found.");
     }
-}, [inviteCode]);
+  }, [inviteCode]);
 
-
-
-  // ✅ Step 2: Fetch event details using event ID
   const fetchEventDetails = useCallback(async () => {
     if (!eventId) return;
     try {
@@ -48,81 +49,99 @@ function JoinEvent() {
 
   useEffect(() => {
     fetchEventDetails();
-  }, [fetchEventDetails, eventId]);
+  }, [fetchEventDetails]);
 
-  // ✅ Join the event and redirect to event ID
   const joinEvent = async () => {
     const name = selectedParticipant || userName.trim();
-  
+
     if (!name) {
       setError("Please select your name or enter a new one.");
       return;
     }
-  
-    console.log("Joining event with inviteCode:", inviteCode, "User:", name);
-  
+
     try {
       const res = await axios.post(`${API_BASE_URL}/events/join`, {
         inviteCode,
         userName: name,
       });
-  
-      if (!res.data.eventId) {
-        throw new Error("Event ID not returned from API");
-      }
-  
-      // ✅ Save the user to localStorage
+
       localStorage.setItem("userName", name);
-  
-      console.log("Redirecting to event:", res.data.eventId);
       navigate(`/event/${res.data.eventId}`);
     } catch (error) {
       setError("Error joining event. Try again.");
     }
   };
-  
 
-
+  // Auto-clear error after 3 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(""), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   return (
-    <Container className="mt-5">
-      {error && <Alert variant="danger">{error}</Alert>}
+    <div className="d-flex flex-column min-vh-100">
+      <Header />
 
-      {event ? (
-        <Card className="p-4 shadow-sm">
-          <h2 className="text-center">Join {event.name}</h2>
-          <p className="text-center">Hosted by: {event.createdBy}</p>
+      <Container className="my-5 flex-grow-1 d-flex justify-content-center">
+        {event ? (
+          <Card className="p-4 shadow-sm" style={{ maxWidth: "500px", width: "100%" }}>
+            <h2 className="text-center mb-2">Join <strong>{event.name}</strong></h2>
+            <p className="text-center text-muted">Hosted by {event.createdBy}</p>
 
-          <h5 className="text-center">Select Your Name</h5>
-          <ListGroup>
-            {event.participants.map((participant) => (
-              <ListGroup.Item
-                key={participant}
-                action
-                active={selectedParticipant === participant}
-                onClick={() => setSelectedParticipant(participant)}
-              >
-                {participant}
+            <h5 className="text-center mt-4">Select Your Name:</h5>
+            <ListGroup className="mb-3">
+              {event.participants.map((participant) => (
+                <ListGroup.Item
+                  key={participant}
+                  action
+                  active={selectedParticipant === participant}
+                  onClick={() => {
+                    setSelectedParticipant(participant);
+                    setUserName("");
+                  }}
+                >
+                  {participant}
+                </ListGroup.Item>
+              ))}
+              <ListGroup.Item>
+                <Form.Control
+                  type="text"
+                  placeholder="Or enter a new name"
+                  value={userName}
+                  onChange={(e) => {
+                    setUserName(e.target.value);
+                    setSelectedParticipant("");
+                  }}
+                />
               </ListGroup.Item>
-            ))}
-            <ListGroup.Item>
-              <Form.Control
-                type="text"
-                placeholder="Enter your name"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-              />
-            </ListGroup.Item>
-          </ListGroup>
+            </ListGroup>
 
-          <Button variant="success" className="mt-3 w-100" onClick={joinEvent}>
-            ✅ Join Event
-          </Button>
-        </Card>
-      ) : (
-        <h2 className="text-center">Fetching Event Details...</h2>
-      )}
-    </Container>
+            <Button variant="success" className="w-100" onClick={joinEvent}>
+              ✅ Join Event
+            </Button>
+          </Card>
+        ) : (
+          <h3 className="text-center">Fetching Event Details...</h3>
+        )}
+      </Container>
+
+      {/* Toast Message */}
+      <ToastContainer position="bottom-center" className="mb-4">
+        <Toast
+          bg="danger"
+          onClose={() => setError("")}
+          show={!!error}
+          delay={3000}
+          autohide
+        >
+          <Toast.Body className="text-white text-center">{error}</Toast.Body>
+        </Toast>
+      </ToastContainer>
+
+      <Footer />
+    </div>
   );
 }
 

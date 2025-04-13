@@ -62,8 +62,8 @@ function Home() {
     <div className="d-flex flex-column min-vh-100">
       <Header />
 
-      <Container className="mt-4 mb-5">
-        <h2 className="text-center fw-bold mb-4">Welcome to PayMates</h2>
+      <Container className="mt-5 mb-5">
+        <h2 className="text-center fw-bold mb-4">Welcome to PayMates!</h2>
 
         <Row className="gy-4">
           {/* Create Event Section */}
