@@ -135,6 +135,10 @@ Then open:
 http://localhost:3000
 ```
 
+---
+
+## **🌎 Live Demo (Hosted on Heroku)**  
+**PayMates:** [https://paymates-frontend-a0fac6217401.herokuapp.com/](https://paymates-frontend-a0fac6217401.herokuapp.com/)  
 
 ---
 
