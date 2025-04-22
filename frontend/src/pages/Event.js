@@ -9,7 +9,7 @@ import EventHeader from "../components/Event/EventHeader";
 import Footer from "../components/Footer";
 import ToastMessage from "../components/ToastMessage";
 
-const API_BASE_URL = "http://localhost:5003/api";
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 function Event() {
   const { eventId } = useParams();
@@ -165,11 +165,13 @@ function Event() {
                 />
               </Col>
               <Col md={5}>
-                <Participants
-                  participants={event.participants}
-                  addParticipant={addParticipant}
-                  removeParticipant={removeParticipant}
-                />
+              <Participants
+                participants={event.participants}
+                addParticipant={addParticipant}
+                removeParticipant={removeParticipant}
+                eventId={event._id}
+                refreshEvent={fetchEvent}
+              />
               </Col>
             </Row>
 

@@ -105,4 +105,39 @@ router.post("/remove-participant", async (req, res) => {
     }
 });
 
+// Update (rename) a participant
+router.post("/update-participant", async (req, res) => {
+    try {
+      const { eventId, originalName, updatedName } = req.body;
+  
+      if (!eventId || !originalName || !updatedName) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+  
+      const event = await Event.findById(eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+  
+      // Check if the updated name already exists
+      if (event.participants.includes(updatedName)) {
+        return res.status(409).json({ message: "Name already exists in the event" });
+      }
+  
+      const index = event.participants.indexOf(originalName);
+      if (index === -1) {
+        return res.status(404).json({ message: "Original participant not found" });
+      }
+  
+      // Replace old name with updated one
+      event.participants[index] = updatedName;
+      await event.save();
+  
+      res.json({ message: "Participant updated", participants: event.participants });
+    } catch (error) {
+      console.error("Error updating participant:", error);
+      res.status(500).json({ message: "Error updating participant", error });
+    }
+  });  
+
 module.exports = router;
